@@ -390,17 +390,28 @@ contactForm.addEventListener('submit', function(e) {
     submitBtn.disabled = true;
 
     // EmailJS service parameters (loaded from config.js)
-    if (typeof window.EMAILJS_CONFIG === 'undefined' || !window.EMAILJS_CONFIG) {
+    // Fallback: Try to access config or use direct values if config.js fails to load
+    let serviceID, templateID, publicKey;
+
+    if (typeof window.EMAILJS_CONFIG !== 'undefined' && window.EMAILJS_CONFIG) {
+        serviceID = window.EMAILJS_CONFIG.serviceID;
+        templateID = window.EMAILJS_CONFIG.templateID;
+        publicKey = window.EMAILJS_CONFIG.publicKey;
+    } else {
+        // Fallback values if config.js is not loaded (for local testing)
+        console.warn('EMAILJS_CONFIG not found, using fallback. Make sure config.js is loaded.');
+        serviceID = 'service_ryu2zj8';
+        templateID = 'template_mjjokp8';
+        publicKey = 'L5ZaBwN0ofLYbEJi2';
+    }
+
+    if (!serviceID || !templateID || !publicKey) {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
         showFormError('Email service configuration is missing. Please ensure config.js exists with your EmailJS credentials.');
-        console.error('EMAILJS_CONFIG not found. Make sure config.js is loaded before script.js');
+        console.error('EmailJS configuration incomplete');
         return;
     }
-
-    const serviceID = window.EMAILJS_CONFIG.serviceID;
-    const templateID = window.EMAILJS_CONFIG.templateID;
-    const publicKey = window.EMAILJS_CONFIG.publicKey;
 
     // Initialize EmailJS with public key
     emailjs.init(publicKey);
