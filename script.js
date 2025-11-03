@@ -355,6 +355,16 @@ document.querySelectorAll('.picture-item img').forEach(img => {
  * The form will send emails to: mohammadmudassir1604@gmail.com
  */
 
+// Wait for DOM and EmailJS to be ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Verify EmailJS loaded
+    if (typeof emailjs === 'undefined') {
+        console.error('EmailJS library failed to load. Check network connection and CDN.');
+        return;
+    }
+    console.log('EmailJS library loaded successfully');
+});
+
 // Contact form validation and submission
 const contactForm = document.getElementById('contact-form');
 
@@ -390,44 +400,74 @@ contactForm.addEventListener('submit', function(e) {
     submitBtn.disabled = true;
 
     // EmailJS service parameters (loaded from config.js)
-    // Fallback: Try to access config or use direct values if config.js fails to load
-    let serviceID, templateID, publicKey;
-
-    if (typeof window.EMAILJS_CONFIG !== 'undefined' && window.EMAILJS_CONFIG) {
-        serviceID = window.EMAILJS_CONFIG.serviceID;
-        templateID = window.EMAILJS_CONFIG.templateID;
-        publicKey = window.EMAILJS_CONFIG.publicKey;
-    } else {
-        // Fallback values if config.js is not loaded (for local testing)
-        console.warn('EMAILJS_CONFIG not found, using fallback. Make sure config.js is loaded.');
-        serviceID = 'service_ryu2zj8';
-        templateID = 'template_mjjokp8';
-        publicKey = 'L5ZaBwN0ofLYbEJi2';
+    if (typeof window.EMAILJS_CONFIG === 'undefined' || !window.EMAILJS_CONFIG) {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        showFormError('Email service configuration is missing. Please ensure config.js exists and is loaded before script.js.');
+        console.error('EMAILJS_CONFIG not found. Make sure config.js is loaded before script.js');
+        console.error('Check: Is config.js in the same directory as index.html?');
+        console.error('Check: Is the script tag for config.js before script.js in HTML?');
+        return;
     }
+
+    const serviceID = window.EMAILJS_CONFIG.serviceID;
+    const templateID = window.EMAILJS_CONFIG.templateID;
+    const publicKey = window.EMAILJS_CONFIG.publicKey;
 
     if (!serviceID || !templateID || !publicKey) {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
-        showFormError('Email service configuration is missing. Please ensure config.js exists with your EmailJS credentials.');
-        console.error('EmailJS configuration incomplete');
+        showFormError('Email service configuration is incomplete. Please check config.js has serviceID, templateID, and publicKey.');
+        console.error('EmailJS configuration incomplete:', {
+            serviceID,
+            templateID,
+            publicKey
+        });
+        return;
+    }
+
+    // Check if EmailJS is loaded
+    if (typeof emailjs === 'undefined') {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        showFormError('EmailJS library failed to load. Please check your internet connection and refresh the page.');
+        console.error('EmailJS library not found');
         return;
     }
 
     // Initialize EmailJS with public key
-    emailjs.init(publicKey);
+    try {
+        emailjs.init(publicKey);
+    } catch (initError) {
+        console.error('EmailJS init error:', initError);
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        showFormError('Failed to initialize email service. Please check configuration.');
+        return;
+    }
 
     // Prepare email parameters
+    // NOTE: Variable names must match your EmailJS template exactly
+    // Common variable names: {{from_name}}, {{from_email}}, {{message}}, {{reply_to}}
     const templateParams = {
         from_name: name,
         from_email: email,
         message: message,
-        to_email: 'mohammadmudassir1604@gmail.com'
+        reply_to: email // Important: This allows you to reply directly to the sender
     };
 
     // Send email using EmailJS
+    // Verify: serviceID, templateID, and publicKey are correct in your EmailJS dashboard
+    console.log('Sending email with:', {
+        serviceID,
+        templateID,
+        templateParams
+    });
+
     emailjs.send(serviceID, templateID, templateParams)
         .then(function(response) {
             // Success
+            console.log('EmailJS success:', response);
             submitBtn.textContent = 'Message Sent! ✓';
             submitBtn.style.backgroundColor = '#10b981';
 
@@ -443,11 +483,36 @@ contactForm.addEventListener('submit', function(e) {
 
             showFormSuccess('Thank you! Your message has been sent successfully.');
         }, function(error) {
-            // Error
-            console.error('EmailJS error:', error);
+            // Error - log full error details
+            console.error('EmailJS send error:', error);
+            console.error('Error details:', {
+                status: error && error.status,
+                text: error && error.text,
+                serviceID: serviceID,
+                templateID: templateID,
+                params: templateParams
+            });
+
+            let errorMessage = 'Sorry, there was an error sending your message. ';
+
+            // Provide specific error messages based on error type
+            if (error && error.status === 0) {
+                errorMessage += 'Network error - please check your internet connection.';
+            } else if (error && error.status === 400) {
+                errorMessage += 'Invalid request - please check the form fields.';
+            } else if (error && (error.status === 401 || error.status === 403)) {
+                errorMessage += 'Authentication failed - please check EmailJS configuration.';
+            } else if (error && error.status === 404) {
+                errorMessage += 'Service or template not found - please check EmailJS setup.';
+            } else if (error && error.text) {
+                errorMessage += 'Error: ' + error.text;
+            } else {
+                errorMessage += 'Please try again later or contact me directly at mohammadmudassir1604@gmail.com';
+            }
+
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
-            showFormError('Sorry, there was an error sending your message. Please try again later or contact me directly at mohammadmudassir1604@gmail.com');
+            showFormError(errorMessage);
         });
 });
 
