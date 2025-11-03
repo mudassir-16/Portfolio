@@ -337,6 +337,24 @@ document.querySelectorAll('.picture-item img').forEach(img => {
     });
 });
 
+/*
+ * CONTACT FORM EMAIL SETUP INSTRUCTIONS:
+ * 
+ * To enable email functionality, you need to set up EmailJS (free service):
+ * 
+ * 1. Go to https://www.emailjs.com and create a free account
+ * 2. Create an Email Service (Gmail, Outlook, etc.)
+ * 3. Create an Email Template with these variables:
+ *    - {{from_name}} - Sender's name
+ *    - {{from_email}} - Sender's email
+ *    - {{message}} - Message content
+ *    - {{to_email}} - Your email (mohammadmudassir1604@gmail.com)
+ * 4. Get your Service ID, Template ID, and Public Key from EmailJS dashboard
+ * 5. Replace the placeholder values below (YOUR_SERVICE_ID, YOUR_TEMPLATE_ID, YOUR_PUBLIC_KEY)
+ * 
+ * The form will send emails to: mohammadmudassir1604@gmail.com
+ */
+
 // Contact form validation and submission
 const contactForm = document.getElementById('contact-form');
 
@@ -371,23 +389,54 @@ contactForm.addEventListener('submit', function(e) {
     submitBtn.textContent = 'Sending...';
     submitBtn.disabled = true;
 
-    // Simulate form submission (replace with actual API call)
-    setTimeout(() => {
-        submitBtn.textContent = 'Message Sent! ✓';
-        submitBtn.style.backgroundColor = '#10b981';
+    // EmailJS service parameters (loaded from config.js)
+    if (typeof EMAILJS_CONFIG === 'undefined') {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        showFormError('Email service configuration is missing. Please ensure config.js exists with your EmailJS credentials.');
+        return;
+    }
 
-        // Reset form
-        contactForm.reset();
+    const serviceID = EMAILJS_CONFIG.serviceID;
+    const templateID = EMAILJS_CONFIG.templateID;
+    const publicKey = EMAILJS_CONFIG.publicKey;
 
-        // Reset button after 3 seconds
-        setTimeout(() => {
+    // Initialize EmailJS with public key
+    emailjs.init(publicKey);
+
+    // Prepare email parameters
+    const templateParams = {
+        from_name: name,
+        from_email: email,
+        message: message,
+        to_email: 'mohammadmudassir1604@gmail.com'
+    };
+
+    // Send email using EmailJS
+    emailjs.send(serviceID, templateID, templateParams)
+        .then(function(response) {
+            // Success
+            submitBtn.textContent = 'Message Sent! ✓';
+            submitBtn.style.backgroundColor = '#10b981';
+
+            // Reset form
+            contactForm.reset();
+
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.backgroundColor = '';
+            }, 3000);
+
+            showFormSuccess('Thank you! Your message has been sent successfully.');
+        }, function(error) {
+            // Error
+            console.error('EmailJS error:', error);
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
-            submitBtn.style.backgroundColor = '';
-        }, 3000);
-
-        showFormSuccess('Thank you! Your message has been sent.');
-    }, 1500);
+            showFormError('Sorry, there was an error sending your message. Please try again later or contact me directly at mohammadmudassir1604@gmail.com');
+        });
 });
 
 function isValidEmail(email) {
