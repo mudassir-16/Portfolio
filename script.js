@@ -390,16 +390,17 @@ contactForm.addEventListener('submit', function(e) {
     submitBtn.disabled = true;
 
     // EmailJS service parameters (loaded from config.js)
-    if (typeof EMAILJS_CONFIG === 'undefined') {
+    if (typeof window.EMAILJS_CONFIG === 'undefined' || !window.EMAILJS_CONFIG) {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
         showFormError('Email service configuration is missing. Please ensure config.js exists with your EmailJS credentials.');
+        console.error('EMAILJS_CONFIG not found. Make sure config.js is loaded before script.js');
         return;
     }
 
-    const serviceID = EMAILJS_CONFIG.serviceID;
-    const templateID = EMAILJS_CONFIG.templateID;
-    const publicKey = EMAILJS_CONFIG.publicKey;
+    const serviceID = window.EMAILJS_CONFIG.serviceID;
+    const templateID = window.EMAILJS_CONFIG.templateID;
+    const publicKey = window.EMAILJS_CONFIG.publicKey;
 
     // Initialize EmailJS with public key
     emailjs.init(publicKey);
